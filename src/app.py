@@ -196,41 +196,30 @@ st.info(
     "stays verifiably accurate. Other DISCOs are the natural next step."
 )
 
-input_mode = st.radio(
-    "How do you want to enter your usage?",
-    ["I know my monthly units", "Help me estimate from appliances"],
-    key="input_mode_radio",
-    horizontal=True,
+# City is shared across all three input modes
+city = st.selectbox(
+    "Your city",
+    options=city_list,
+    index=city_list.index("Islamabad"),
+    key="city_input",
 )
 
-if input_mode == "I know my monthly units":
-    col_left, col_right = st.columns([1, 1], gap="medium")
-    with col_left:
-        default_units = int(st.session_state["units_override"]) if st.session_state["units_override"] else 300
-        monthly_units = st.number_input(
-            "Monthly electricity usage (units / kWh)",
-            min_value=1,
-            max_value=10_000,
-            value=default_units,
-            step=10,
-            help="Check your last bill — look for 'Units Consumed' or 'kWh'.",
-            key="units_input",
-        )
-    with col_right:
-        city = st.selectbox(
-            "Your city",
-            options=city_list,
-            index=city_list.index("Islamabad"),
-            key="city_input",
-        )
+# ── Three input modes as tabs ──
+tab1, tab2, tab3 = st.tabs(["📋 Enter Units Manually", "🔌 Estimate from Appliances", "📄 Upload Bill Photo"])
 
-else:  # appliance mode
-    city = st.selectbox(
-        "Your city",
-        options=city_list,
-        index=city_list.index("Islamabad"),
-        key="city_input",
+with tab1:
+    default_units = int(st.session_state["units_override"]) if st.session_state["units_override"] else 300
+    monthly_units_tab1 = st.number_input(
+        "Monthly electricity usage (units / kWh)",
+        min_value=1,
+        max_value=10_000,
+        value=default_units,
+        step=10,
+        help="Check your last bill — look for 'Units Consumed' or 'kWh'.",
+        key="units_input",
     )
+
+with tab2:
     try:
         selected_appliances = st.multiselect(
             "Select the appliances you use:",
@@ -244,7 +233,10 @@ else:  # appliance mode
                 defaults = APPLIANCE_WATTAGE[appliance]
                 acol1, acol2, acol3 = st.columns([3, 1, 1], gap="small")
                 with acol1:
-                    st.markdown(f"**{appliance}** &nbsp; <span style='color:#9ca3af;font-size:0.85rem'>({defaults['watts']} W)</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"**{appliance}** &nbsp; <span style='color:#9ca3af;font-size:0.85rem'>({defaults['watts']} W)</span>",
+                        unsafe_allow_html=True,
+                    )
                 with acol2:
                     qty = st.number_input(
                         "Qty",
@@ -271,21 +263,77 @@ else:  # appliance mode
                 })
 
             appl_result = calculate_units_from_appliances(items)
-            monthly_units = max(1, appl_result["monthly_units"])
-            st.info(f"⚡ Estimated monthly usage: **{monthly_units} units** ({appl_result['daily_kwh']} kWh/day)")
+            st.session_state["appliance_computed_units"] = max(1, appl_result["monthly_units"])
+            st.info(f"\u26a1 Estimated monthly usage: **{st.session_state['appliance_computed_units']} units** ({appl_result['daily_kwh']} kWh/day)")
 
             with st.expander("See appliance breakdown"):
                 for row in appl_result["breakdown"]:
                     st.write(
-                        f"- **{row['name']}** × {row['quantity']} "
+                        f"- **{row['name']}** \u00d7 {row['quantity']} "
                         f"@ {row['hours_per_day']} h/day = {row['daily_kwh']} kWh/day"
                     )
         else:
-            monthly_units = 300
-            st.caption("Select appliances above — quantities and hours will appear here.")
+            st.session_state["appliance_computed_units"] = None
+            st.caption("Select appliances above \u2014 quantities and hours will appear here.")
     except Exception as appl_err:
         st.error(f"Appliance estimator error: {appl_err}")
-        monthly_units = 300
+        st.session_state["appliance_computed_units"] = None
+
+with tab3:
+    uploaded_file = st.file_uploader(
+        "Upload a photo of your electricity bill (JPEG or PNG)",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed",
+        key="bill_upload",
+    )
+
+    if uploaded_file is not None:
+        with st.spinner("Reading your bill photo\u2026"):
+            try:
+                suffix = ".jpg" if uploaded_file.type in ("image/jpeg", "image/jpg") else ".png"
+                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                    tmp.write(uploaded_file.getbuffer())
+                    tmp_path = tmp.name
+
+                ocr_result = extract_units_from_bill(tmp_path)
+
+                if ocr_result.get("units_found"):
+                    detected = ocr_result["monthly_units"]
+                    confidence = ocr_result.get("confidence", "")
+                    raw = ocr_result.get("raw_text_seen", "")
+
+                    st.info(
+                        f"\U0001f4cb Detected **{detected:.0f} units** "
+                        f"(confidence: {confidence}).  \n"
+                        f"Raw text seen: *\"{raw}\"*"
+                    )
+
+                    btn_col1, btn_col2 = st.columns(2, gap="small")
+                    with btn_col1:
+                        if st.button("\u2705 Use This Number", key="ocr_accept_btn"):
+                            st.session_state["units_override"] = detected
+                            st.success(f"Units updated to {detected:.0f}")
+                    with btn_col2:
+                        if st.button("\u270f\ufe0f Enter Manually Instead", key="ocr_reject_btn"):
+                            st.info("No problem, type the correct units in the field above.")
+                else:
+                    err = ocr_result.get("error", "")
+                    raw = ocr_result.get("raw_text_seen", "")
+                    st.warning(
+                        f"\u26a0\ufe0f Could not clearly read units from the bill image. "
+                        f"Raw text seen: *\"{raw}\"*{(chr(10) + 'Error: ' + err) if err else ''}  \n"
+                        "Please enter your units manually in the first tab."
+                    )
+            except Exception as e:
+                st.error(f"Error processing uploaded image: {e}")
+
+# ── Resolve which monthly_units to use ──
+# Appliance tab wins if appliances are selected; otherwise use manual input
+# (which already reflects any bill-photo-accepted units_override as its default)
+if st.session_state.get("appliance_select") and st.session_state.get("appliance_computed_units"):
+    monthly_units = st.session_state["appliance_computed_units"]
+else:
+    monthly_units = monthly_units_tab1
 
 is_tou = st.checkbox(
     "My sanctioned load is 5 kW or above (Time of Use meter)",
@@ -309,60 +357,6 @@ with col_inv:
         options=list(IP_RATING.keys()),
         key="inverter_location_input",
     )
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------------------------
-# Optional bill photo upload
-# ---------------------------------------------------------------------------
-st.markdown('<div class="card"><div class="card-title">📄 Or Upload Your Bill Photo (Optional)</div>', unsafe_allow_html=True)
-
-uploaded_file = st.file_uploader(
-    "Upload a photo of your electricity bill (JPEG or PNG)",
-    type=["jpg", "jpeg", "png"],
-    label_visibility="collapsed",
-    key="bill_upload",
-)
-
-if uploaded_file is not None:
-    with st.spinner("Reading your bill photo…"):
-        try:
-            suffix = ".jpg" if uploaded_file.type in ("image/jpeg", "image/jpg") else ".png"
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                tmp.write(uploaded_file.getbuffer())
-                tmp_path = tmp.name
-
-            ocr_result = extract_units_from_bill(tmp_path)
-
-            if ocr_result.get("units_found"):
-                detected = ocr_result["monthly_units"]
-                confidence = ocr_result.get("confidence", "")
-                raw = ocr_result.get("raw_text_seen", "")
-
-                st.info(
-                    f"📋 Detected **{detected:.0f} units** "
-                    f"(confidence: {confidence}).  \n"
-                    f"Raw text seen: *\"{raw}\"*"
-                )
-
-                btn_col1, btn_col2 = st.columns(2, gap="small")
-                with btn_col1:
-                    if st.button("✅ Use This Number", key="ocr_accept_btn"):
-                        st.session_state["units_override"] = detected
-                        st.success(f"Units updated to {detected:.0f}")
-                with btn_col2:
-                    if st.button("✏️ Enter Manually Instead", key="ocr_reject_btn"):
-                        st.info("No problem, type the correct units in the field above.")
-            else:
-                err = ocr_result.get("error", "")
-                raw = ocr_result.get("raw_text_seen", "")
-                st.warning(
-                    f"⚠️ Could not clearly read units from the bill image. "
-                    f"Raw text seen: *\"{raw}\"*{(chr(10) + 'Error: ' + err) if err else ''}  \n"
-                    "Please enter your units manually above."
-                )
-        except Exception as e:
-            st.error(f"Error processing uploaded image: {e}")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
