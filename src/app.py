@@ -26,6 +26,7 @@ from solar_math import (
     calculate_units_from_appliances,
 )
 from main import get_explanation, extract_units_from_bill
+from pdf_export import generate_proposal_pdf
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -398,9 +399,9 @@ if run_estimate:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # ── AI explanation ──
         with st.spinner("Writing your explanation…"):
             explanation = get_explanation(estimate)
+        st.session_state["last_explanation"] = explanation
 
         st.info(f"💡 {explanation}")
 
@@ -409,6 +410,7 @@ if run_estimate:
         st.subheader("🔩 Recommended mounting & protection")
         try:
             mount = get_mounting_recommendation(roof_type, inverter_location)
+            st.session_state["last_mount"] = mount
             st.markdown(
                 f"**Mounting structure:**  \n{mount['structure_recommendation']}"
             )
@@ -511,3 +513,29 @@ if st.session_state.get("last_estimate"):
 
             except Exception as e:
                 st.error(f"Could not evaluate the vendor quote: {e}")
+
+# ---------------------------------------------------------------------------
+# PDF Download — shown whenever an estimate exists in session_state
+# ---------------------------------------------------------------------------
+if st.session_state.get("last_estimate"):
+    st.markdown("---")
+    try:
+        _est  = st.session_state["last_estimate"]
+        _expl = st.session_state.get("last_explanation", "See the numbers above for your solar estimate.")
+        _mnt  = st.session_state.get("last_mount", {
+            "structure_recommendation": "See estimate above.",
+            "ip_rating": "IP65",
+            "ip_reason": "Standard outdoor protection.",
+        })
+        _vc   = st.session_state.get("last_vendor_check", None)
+
+        pdf_bytes = generate_proposal_pdf(_est, _expl, _mnt, _vc)
+        st.download_button(
+            label="⬇️ Download Proposal as PDF",
+            data=pdf_bytes,
+            file_name="solar_proposal.pdf",
+            mime="application/pdf",
+            key="pdf_download_btn",
+        )
+    except Exception as pdf_err:
+        st.error(f"Could not generate PDF: {pdf_err}")
