@@ -16,7 +16,15 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(__file__))
 
-from solar_math import get_full_estimate, CITY_PEAK_SUN_HOURS
+from solar_math import (
+    get_full_estimate,
+    CITY_PEAK_SUN_HOURS,
+    ROOF_STRUCTURE,
+    IP_RATING,
+    get_mounting_recommendation,
+    APPLIANCE_WATTAGE,
+    calculate_units_from_appliances,
+)
 from main import get_explanation, extract_units_from_bill
 
 # ---------------------------------------------------------------------------
@@ -178,27 +186,96 @@ st.markdown('<div class="card"><div class="card-title">Your Details</div>', unsa
 
 city_list = sorted(CITY_PEAK_SUN_HOURS.keys())
 
-col_left, col_right = st.columns([1, 1], gap="medium")
+input_mode = st.radio(
+    "How do you want to enter your usage?",
+    ["I know my monthly units", "Help me estimate from appliances"],
+    key="input_mode_radio",
+    horizontal=True,
+)
 
-with col_left:
-    default_units = int(st.session_state["units_override"]) if st.session_state["units_override"] else 300
-    monthly_units = st.number_input(
-        "Monthly electricity usage (units / kWh)",
-        min_value=1,
-        max_value=10_000,
-        value=default_units,
-        step=10,
-        help="Check your last bill — look for 'Units Consumed' or 'kWh'.",
-        key="units_input",
-    )
+if input_mode == "I know my monthly units":
+    col_left, col_right = st.columns([1, 1], gap="medium")
+    with col_left:
+        default_units = int(st.session_state["units_override"]) if st.session_state["units_override"] else 300
+        monthly_units = st.number_input(
+            "Monthly electricity usage (units / kWh)",
+            min_value=1,
+            max_value=10_000,
+            value=default_units,
+            step=10,
+            help="Check your last bill — look for 'Units Consumed' or 'kWh'.",
+            key="units_input",
+        )
+    with col_right:
+        city = st.selectbox(
+            "Your city",
+            options=city_list,
+            index=city_list.index("Islamabad"),
+            key="city_input",
+        )
 
-with col_right:
+else:  # appliance mode
     city = st.selectbox(
         "Your city",
         options=city_list,
         index=city_list.index("Islamabad"),
         key="city_input",
     )
+    try:
+        selected_appliances = st.multiselect(
+            "Select the appliances you use:",
+            options=list(APPLIANCE_WATTAGE.keys()),
+            key="appliance_select",
+        )
+        items = []
+        if selected_appliances:
+            st.markdown("**Adjust quantities and daily hours:**")
+            for appliance in selected_appliances:
+                defaults = APPLIANCE_WATTAGE[appliance]
+                acol1, acol2, acol3 = st.columns([3, 1, 1], gap="small")
+                with acol1:
+                    st.markdown(f"**{appliance}** &nbsp; <span style='color:#9ca3af;font-size:0.85rem'>({defaults['watts']} W)</span>", unsafe_allow_html=True)
+                with acol2:
+                    qty = st.number_input(
+                        "Qty",
+                        min_value=0,
+                        value=1,
+                        step=1,
+                        key=f"qty_{appliance}",
+                        label_visibility="collapsed",
+                    )
+                with acol3:
+                    hrs = st.number_input(
+                        "Hrs/day",
+                        min_value=0.0,
+                        value=float(defaults["default_hours"]),
+                        step=0.5,
+                        key=f"hrs_{appliance}",
+                        label_visibility="collapsed",
+                    )
+                items.append({
+                    "name": appliance,
+                    "watts": defaults["watts"],
+                    "quantity": qty,
+                    "hours_per_day": hrs,
+                })
+
+            appl_result = calculate_units_from_appliances(items)
+            monthly_units = max(1, appl_result["monthly_units"])
+            st.info(f"⚡ Estimated monthly usage: **{monthly_units} units** ({appl_result['daily_kwh']} kWh/day)")
+
+            with st.expander("See appliance breakdown"):
+                for row in appl_result["breakdown"]:
+                    st.write(
+                        f"- **{row['name']}** × {row['quantity']} "
+                        f"@ {row['hours_per_day']} h/day = {row['daily_kwh']} kWh/day"
+                    )
+        else:
+            monthly_units = 300
+            st.caption("Select appliances above — quantities and hours will appear here.")
+    except Exception as appl_err:
+        st.error(f"Appliance estimator error: {appl_err}")
+        monthly_units = 300
 
 is_tou = st.checkbox(
     "My sanctioned load is 5 kW or above (Time of Use meter)",
@@ -206,6 +283,22 @@ is_tou = st.checkbox(
     key="tou_input",
     help="If your meter has two rates (peak / off-peak), tick this box.",
 )
+
+col_roof, col_inv = st.columns([1, 1], gap="medium")
+
+with col_roof:
+    roof_type = st.selectbox(
+        "Roof type",
+        options=list(ROOF_STRUCTURE.keys()),
+        key="roof_type_input",
+    )
+
+with col_inv:
+    inverter_location = st.selectbox(
+        "Inverter mounting location",
+        options=list(IP_RATING.keys()),
+        key="inverter_location_input",
+    )
 
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -301,6 +394,21 @@ if run_estimate:
             explanation = get_explanation(estimate)
 
         st.info(f"💡 {explanation}")
+
+        # ── Mounting & protection recommendation ──
+        st.markdown("---")
+        st.subheader("🔩 Recommended mounting & protection")
+        try:
+            mount = get_mounting_recommendation(roof_type, inverter_location)
+            st.markdown(
+                f"**Mounting structure:**  \n{mount['structure_recommendation']}"
+            )
+            st.markdown(
+                f"**Inverter protection rating:** **{mount['ip_rating']}**  \n"
+                f"{mount['ip_reason']}"
+            )
+        except Exception as mount_err:
+            st.error(f"Could not load mounting recommendation: {mount_err}")
 
     except Exception as e:
         st.error(f"Something went wrong while calculating your estimate: {e}")

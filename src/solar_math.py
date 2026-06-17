@@ -237,6 +237,125 @@ def get_full_estimate(monthly_units: float, city: str, is_tou: bool = False) -> 
 
 
 # ---------------------------------------------------------------------------
+# Mounting & protection lookups
+# ---------------------------------------------------------------------------
+
+ROOF_STRUCTURE = {
+    "RCC / Concrete flat roof": (
+        "Galvanized iron (GI) elevated MS structure on chemical-anchored bases, "
+        "tilted ~30 degrees facing south for best year-round output."
+    ),
+    "Metal / tin sheet roof": (
+        "Aluminium mounting rails clamped to roof purlins using L-feet or "
+        "standing-seam clamps, minimizing roof penetration to avoid leaks."
+    ),
+    "Ground mount": (
+        "GI ground-mount frame on concrete foundation footings, "
+        "tilted ~30 degrees facing south."
+    ),
+}
+
+IP_RATING = {
+    "Indoor (garage, utility room, covered area)": (
+        "IP21",
+        "Indoor, dry and dust-protected. Suitable for an inverter mounted inside "
+        "a clean, covered space away from rain and direct sun.",
+    ),
+    "Outdoor (exposed wall or rooftop)": (
+        "IP65",
+        "Dust-tight and protected against water jets. Required when the inverter "
+        "is exposed to rain, dust, and direct sunlight.",
+    ),
+    "Outdoor in coastal or high-dust area": (
+        "IP66",
+        "Higher protection against heavy dust and strong water exposure. "
+        "Recommended near the coast or in very dusty industrial areas.",
+    ),
+}
+
+
+def get_mounting_recommendation(roof_type: str, inverter_location: str) -> dict:
+    """Return mounting structure and inverter IP-rating recommendation.
+
+    Args:
+        roof_type:         One of the keys in ROOF_STRUCTURE.
+        inverter_location: One of the keys in IP_RATING.
+
+    Returns:
+        dict with keys: roof_type, structure_recommendation, ip_rating, ip_reason.
+    """
+    structure = ROOF_STRUCTURE.get(roof_type, ROOF_STRUCTURE["RCC / Concrete flat roof"])
+    ip_code, ip_reason = IP_RATING.get(
+        inverter_location, IP_RATING["Outdoor (exposed wall or rooftop)"]
+    )
+    return {
+        "roof_type": roof_type,
+        "structure_recommendation": structure,
+        "ip_rating": ip_code,
+        "ip_reason": ip_reason,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Appliance-based usage estimator
+# ---------------------------------------------------------------------------
+
+APPLIANCE_WATTAGE = {
+    "Ceiling fan":               {"watts": 80,   "default_hours": 12},
+    "LED bulb":                  {"watts": 12,   "default_hours": 6},
+    "Energy saver / tube light": {"watts": 25,   "default_hours": 6},
+    "LED TV":                    {"watts": 80,   "default_hours": 5},
+    "Refrigerator (medium)":     {"watts": 200,  "default_hours": 8},
+    "Deep freezer":              {"watts": 250,  "default_hours": 8},
+    "AC 1 ton (non-inverter)":   {"watts": 1200, "default_hours": 8},
+    "AC 1.5 ton (non-inverter)": {"watts": 1800, "default_hours": 8},
+    "Inverter AC 1 ton":         {"watts": 900,  "default_hours": 8},
+    "Inverter AC 1.5 ton":       {"watts": 1400, "default_hours": 8},
+    "Washing machine":           {"watts": 500,  "default_hours": 1},
+    "Water pump 0.5 hp":         {"watts": 375,  "default_hours": 1},
+    "Water pump 1 hp":           {"watts": 750,  "default_hours": 1},
+    "Iron":                      {"watts": 1000, "default_hours": 0.5},
+    "Microwave oven":            {"watts": 1000, "default_hours": 0.3},
+    "Electric geyser":           {"watts": 2000, "default_hours": 1},
+    "Desktop computer":          {"watts": 200,  "default_hours": 4},
+    "Laptop":                    {"watts": 65,   "default_hours": 4},
+    "Water dispenser":           {"watts": 100,  "default_hours": 12},
+}
+
+
+def calculate_units_from_appliances(items: list) -> dict:
+    """Estimate monthly units from a list of appliances.
+
+    Args:
+        items: list of dicts, each with keys:
+               name (str), watts (float), quantity (int), hours_per_day (float)
+
+    Returns:
+        dict with keys:
+            monthly_units  – rounded integer (units/month)
+            daily_kwh      – total daily consumption (kWh)
+            breakdown      – list of per-appliance dicts
+    """
+    total_daily_kwh = 0.0
+    breakdown = []
+    for it in items:
+        daily_kwh = (it["watts"] * it["quantity"] * it["hours_per_day"]) / 1000
+        total_daily_kwh += daily_kwh
+        breakdown.append({
+            "name":         it["name"],
+            "quantity":     it["quantity"],
+            "watts":        it["watts"],
+            "hours_per_day": it["hours_per_day"],
+            "daily_kwh":   round(daily_kwh, 2),
+        })
+    return {
+        "monthly_units": round(total_daily_kwh * 30),
+        "daily_kwh":     round(total_daily_kwh, 2),
+        "breakdown":     breakdown,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Quick self-test
 # ---------------------------------------------------------------------------
 
