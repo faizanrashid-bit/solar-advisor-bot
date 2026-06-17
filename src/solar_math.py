@@ -10,7 +10,15 @@ from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
-import streamlit as st
+
+# Use st.cache_data when running inside Streamlit; fall back to a no-op
+# decorator when the module is imported standalone (e.g. python src/solar_math.py).
+try:
+    import streamlit as st
+    _cache = st.cache_data(ttl=86400)
+except Exception:
+    def _cache(fn):          # type: ignore
+        return fn
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -364,7 +372,7 @@ def calculate_units_from_appliances(items: list) -> dict:
 # Live tariff scraper (informational only — does not affect any calculation)
 # ---------------------------------------------------------------------------
 
-@st.cache_data(ttl=86400)
+@_cache
 def fetch_live_tariff_slabs() -> dict:
     """
     Attempts to fetch and parse the current IESCO A-1 Residential Un-Protected
