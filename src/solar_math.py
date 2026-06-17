@@ -6,6 +6,11 @@ No AI calls, no Streamlit, no UI dependencies.
 """
 
 from math import ceil
+from datetime import datetime
+
+import requests
+from bs4 import BeautifulSoup
+import streamlit as st
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -353,6 +358,85 @@ def calculate_units_from_appliances(items: list) -> dict:
         "daily_kwh":     round(total_daily_kwh, 2),
         "breakdown":     breakdown,
     }
+
+
+# ---------------------------------------------------------------------------
+# Live tariff scraper (informational only — does not affect any calculation)
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=86400)
+def fetch_live_tariff_slabs() -> dict:
+    """
+    Attempts to fetch and parse the current IESCO A-1 Residential Un-Protected
+    tariff slabs from https://www.iesco.com.pk/tariff-guide
+    Returns {"success": bool, "slabs": list, "source": str, "checked_at": str}
+    On ANY failure (network, parsing, unexpected structure), falls back to
+    the existing IESCO_UNPROTECTED_SLABS constant. Never raises.
+    """
+    checked_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    fallback = {
+        "success": False,
+        "slabs": IESCO_UNPROTECTED_SLABS,
+        "source": "hardcoded (SRO 279(I)/2026, verified)",
+        "checked_at": checked_at,
+    }
+    try:
+        response = requests.get("https://www.iesco.com.pk/tariff-guide", timeout=6)
+        if response.status_code != 200:
+            return fallback
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        tables = soup.find_all("table")
+        target_table = None
+        for table in tables:
+            text = table.get_text()
+            if "Un-Protected" in text or "Un-protected" in text:
+                target_table = table
+                break
+
+        if target_table is None:
+            return fallback
+
+        rows = target_table.find_all("tr")
+        parsed_slabs = []
+        slab_upper_bounds = [100, 200, 300, 400, 500, 600, 700]
+        slab_index = 0
+        capturing = False
+
+        for row in rows:
+            cells = [c.get_text(strip=True) for c in row.find_all(["td", "th"])]
+            row_text = " ".join(cells)
+            if "Un-Protected" in row_text or "Un-protected" in row_text:
+                capturing = True
+                continue
+            if capturing and cells:
+                rate_candidates = [c for c in cells if c.replace(".", "", 1).isdigit()]
+                if rate_candidates:
+                    try:
+                        rate = float(rate_candidates[-1])
+                        if 5 <= rate <= 80:
+                            if slab_index < len(slab_upper_bounds):
+                                parsed_slabs.append((slab_upper_bounds[slab_index], rate))
+                                slab_index += 1
+                            else:
+                                parsed_slabs.append((float("inf"), rate))
+                                break
+                    except ValueError:
+                        continue
+            if "Sanctioned load 5 kW" in row_text or "Time Of Use" in row_text:
+                break
+
+        if len(parsed_slabs) < 6:
+            return fallback
+
+        return {
+            "success": True,
+            "slabs": parsed_slabs,
+            "source": "live (iesco.com.pk/tariff-guide)",
+            "checked_at": checked_at,
+        }
+    except Exception:
+        return fallback
 
 
 # ---------------------------------------------------------------------------

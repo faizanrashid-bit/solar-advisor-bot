@@ -186,6 +186,15 @@ st.markdown('<div class="card"><div class="card-title">Your Details</div>', unsa
 
 city_list = sorted(CITY_PEAK_SUN_HOURS.keys())
 
+st.info(
+    "Currently verified for IESCO (Islamabad) using official SRO\u00a0279(I)/2026 tariff "
+    "data, with live-fetch cross-checking against iesco.com.pk/tariff-guide. "
+    "We looked into LESCO and FESCO too \u2014 LESCO\u2019s published sources conflict with "
+    "each other on current rates, and FESCO\u2019s tariff page blocks automated access. "
+    "Rather than guess, we kept this version IESCO-only so every number you see "
+    "stays verifiably accurate. Other DISCOs are the natural next step."
+)
+
 input_mode = st.radio(
     "How do you want to enter your usage?",
     ["I know my monthly units", "Help me estimate from appliances"],
