@@ -44,119 +44,352 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
+    /* ══════════════════════════════════════
+       BASE TYPOGRAPHY
+    ══════════════════════════════════════ */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
+    h1, h2, h3, h4 {
+        font-family: 'Space Grotesk', sans-serif !important;
+    }
 
-    /* ── Page background ── */
+    /* ══════════════════════════════════════
+       ANIMATED BACKGROUND
+    ══════════════════════════════════════ */
     .stApp {
-        background: linear-gradient(135deg, #0d1117 0%, #111827 60%, #0f1f12 100%);
+        background:
+            radial-gradient(ellipse 80% 50% at 20% 10%, rgba(251,146,60,0.07) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, rgba(34,197,94,0.05) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 60% at 50% 50%, rgba(250,204,21,0.04) 0%, transparent 70%),
+            linear-gradient(160deg, #080c14 0%, #0d1117 40%, #0b1a0f 80%, #080c14 100%);
         min-height: 100vh;
     }
 
-    /* ── Hero header ── */
+    /* ══════════════════════════════════════
+       HERO HEADER
+    ══════════════════════════════════════ */
     .hero-title {
-        font-size: 2.6rem;
-        font-weight: 700;
-        background: linear-gradient(90deg, #facc15, #fb923c, #f97316);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2.9rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #facc15 0%, #fb923c 45%, #f97316 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-align: center;
-        margin-bottom: 0.25rem;
-        letter-spacing: -0.5px;
+        text-align: left;
+        margin-bottom: 0.3rem;
+        letter-spacing: -1px;
+        line-height: 1.15;
+        filter: drop-shadow(0 0 32px rgba(250,204,21,0.18));
     }
     .hero-caption {
-        text-align: center;
+        text-align: left;
         color: #6b7280;
-        font-size: 0.95rem;
-        margin-bottom: 2rem;
+        font-size: 0.92rem;
+        margin-bottom: 0;
         font-style: italic;
+        letter-spacing: 0.2px;
     }
 
-    /* ── Card wrapper ── */
+    /* ══════════════════════════════════════
+       GLASSMORPHISM CARD
+    ══════════════════════════════════════ */
     .card {
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 1.5rem 1.75rem;
-        margin-bottom: 1.25rem;
-        backdrop-filter: blur(8px);
+        background: linear-gradient(135deg,
+            rgba(255,255,255,0.055) 0%,
+            rgba(255,255,255,0.025) 100%);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-top: 1px solid rgba(255,255,255,0.16);
+        border-radius: 20px;
+        padding: 1.6rem 1.9rem;
+        margin-bottom: 1.4rem;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow:
+            0 4px 6px rgba(0,0,0,0.3),
+            0 20px 40px rgba(0,0,0,0.2),
+            inset 0 1px 0 rgba(255,255,255,0.06);
+        position: relative;
+        overflow: hidden;
+    }
+    .card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(250,204,21,0.4) 50%,
+            transparent 100%);
     }
     .card-title {
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.7rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #9ca3af;
-        margin-bottom: 1rem;
+        letter-spacing: 2px;
+        color: rgba(250,204,21,0.7);
+        margin-bottom: 1.1rem;
     }
 
-    /* ── Metric overrides ── */
+    /* ══════════════════════════════════════
+       METRIC TILES
+    ══════════════════════════════════════ */
     [data-testid="metric-container"] {
-        background: rgba(250, 204, 21, 0.06);
-        border: 1px solid rgba(250, 204, 21, 0.15);
-        border-radius: 12px;
-        padding: 1rem 1.25rem !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: linear-gradient(135deg,
+            rgba(250,204,21,0.08) 0%,
+            rgba(249,115,22,0.05) 100%);
+        border: 1px solid rgba(250,204,21,0.18);
+        border-radius: 16px;
+        padding: 1.1rem 1.3rem !important;
+        transition: transform 0.25s cubic-bezier(.34,1.56,.64,1),
+                    box-shadow 0.25s ease,
+                    border-color 0.25s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    [data-testid="metric-container"]::after {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at center,
+            rgba(250,204,21,0.04) 0%, transparent 65%);
+        pointer-events: none;
     }
     [data-testid="metric-container"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(250, 204, 21, 0.12);
+        transform: translateY(-4px) scale(1.01);
+        box-shadow:
+            0 12px 32px rgba(250,204,21,0.15),
+            0 4px 12px rgba(0,0,0,0.3);
+        border-color: rgba(250,204,21,0.35);
     }
     [data-testid="stMetricValue"] {
         color: #facc15 !important;
+        font-family: 'Space Grotesk', sans-serif !important;
         font-weight: 700 !important;
+        font-size: 1.55rem !important;
+        letter-spacing: -0.5px;
     }
     [data-testid="stMetricLabel"] {
         color: #9ca3af !important;
-        font-size: 0.82rem !important;
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
     }
 
-    /* ── Button ── */
+    /* ══════════════════════════════════════
+       MAIN CTA BUTTON
+    ══════════════════════════════════════ */
+    div.stButton > button[kind="secondary"],
     div.stButton > button {
         width: 100%;
-        background: linear-gradient(90deg, #f97316, #facc15);
+        background: linear-gradient(90deg, #f97316 0%, #facc15 100%);
         color: #0d1117;
+        font-family: 'Space Grotesk', sans-serif;
         font-weight: 700;
         font-size: 1.05rem;
+        letter-spacing: 0.3px;
         border: none;
-        border-radius: 10px;
-        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        padding: 0.8rem 1.5rem;
         cursor: pointer;
-        transition: opacity 0.2s ease, transform 0.15s ease;
-        margin-top: 0.5rem;
+        transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+        box-shadow:
+            0 4px 20px rgba(249,115,22,0.35),
+            0 2px 6px rgba(0,0,0,0.3);
+        margin-top: 0.6rem;
+        position: relative;
+        overflow: hidden;
     }
     div.stButton > button:hover {
-        opacity: 0.9;
+        transform: translateY(-2px) scale(1.01);
+        box-shadow:
+            0 8px 30px rgba(250,204,21,0.4),
+            0 4px 12px rgba(0,0,0,0.4);
+    }
+    div.stButton > button:active {
+        transform: translateY(0) scale(0.99);
+    }
+
+    /* ══════════════════════════════════════
+       TABS
+    ══════════════════════════════════════ */
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        padding: 4px;
+        border: 1px solid rgba(255,255,255,0.07);
+        gap: 2px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 9px;
+        padding: 0.5rem 1.1rem;
+        color: #6b7280;
+        font-weight: 500;
+        font-size: 0.88rem;
+        transition: all 0.18s ease;
+        border: none !important;
+        background: transparent !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #d1d5db;
+        background: rgba(255,255,255,0.05) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg,
+            rgba(250,204,21,0.18) 0%,
+            rgba(249,115,22,0.12) 100%) !important;
+        color: #facc15 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(250,204,21,0.12);
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    .stTabs [data-baseweb="tab-panel"] {
+        padding-top: 1.1rem !important;
+    }
+
+    /* ══════════════════════════════════════
+       INPUTS & SELECTS
+    ══════════════════════════════════════ */
+    .stNumberInput input,
+    .stTextInput input,
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.10) !important;
+        border-radius: 10px !important;
+        color: #f3f4f6 !important;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .stNumberInput input:focus,
+    .stTextInput input:focus {
+        border-color: rgba(250,204,21,0.45) !important;
+        box-shadow: 0 0 0 3px rgba(250,204,21,0.08) !important;
+        outline: none !important;
+    }
+
+    /* ══════════════════════════════════════
+       CHECKBOX
+    ══════════════════════════════════════ */
+    .stCheckbox label span {
+        color: #d1d5db !important;
+        font-size: 0.93rem;
+    }
+
+    /* ══════════════════════════════════════
+       ALERT & INFO BOXES
+    ══════════════════════════════════════ */
+    [data-testid="stAlert"] {
+        border-radius: 12px !important;
+        border-width: 1px !important;
+    }
+    [data-testid="stAlert"][data-baseweb="notification"] {
+        background: rgba(59,130,246,0.07) !important;
+        border-color: rgba(59,130,246,0.25) !important;
+    }
+
+    /* ══════════════════════════════════════
+       DOWNLOAD BUTTON — gold pill
+    ══════════════════════════════════════ */
+    [data-testid="stDownloadButton"] > button {
+        background: linear-gradient(90deg,
+            rgba(250,204,21,0.15) 0%,
+            rgba(249,115,22,0.10) 100%) !important;
+        border: 1px solid rgba(250,204,21,0.35) !important;
+        color: #facc15 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 12px rgba(250,204,21,0.10) !important;
+    }
+    [data-testid="stDownloadButton"] > button:hover {
+        background: linear-gradient(90deg,
+            rgba(250,204,21,0.25) 0%,
+            rgba(249,115,22,0.18) 100%) !important;
+        box-shadow: 0 6px 24px rgba(250,204,21,0.2) !important;
         transform: translateY(-1px);
     }
 
-    /* ── Inputs ── */
-    .stNumberInput input, .stSelectbox > div > div {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 8px !important;
-        color: #f3f4f6 !important;
+    /* ══════════════════════════════════════
+       DIVIDER
+    ══════════════════════════════════════ */
+    hr {
+        border: none !important;
+        height: 1px !important;
+        background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255,255,255,0.08) 20%,
+            rgba(250,204,21,0.15) 50%,
+            rgba(255,255,255,0.08) 80%,
+            transparent 100%) !important;
+        margin: 1.5rem 0 !important;
     }
 
-    /* ── Info box ── */
-    .stInfo {
-        background: rgba(59, 130, 246, 0.08) !important;
-        border-left: 3px solid #3b82f6 !important;
-        border-radius: 8px !important;
-    }
-
-    /* ── Divider ── */
-    hr { border-color: rgba(255,255,255,0.07); }
-
-    /* ── File uploader ── */
+    /* ══════════════════════════════════════
+       FILE UPLOADER
+    ══════════════════════════════════════ */
     [data-testid="stFileUploadDropzone"] {
-        background: rgba(255,255,255,0.03) !important;
-        border: 2px dashed rgba(250,204,21,0.25) !important;
+        background: rgba(250,204,21,0.02) !important;
+        border: 2px dashed rgba(250,204,21,0.22) !important;
+        border-radius: 16px !important;
+        transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    [data-testid="stFileUploadDropzone"]:hover {
+        background: rgba(250,204,21,0.04) !important;
+        border-color: rgba(250,204,21,0.4) !important;
+    }
+
+    /* ══════════════════════════════════════
+       SUBHEADERS
+    ══════════════════════════════════════ */
+    h2, h3 {
+        background: linear-gradient(90deg, #f3f4f6, #d1d5db);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 700 !important;
+        letter-spacing: -0.3px;
+    }
+
+    /* ══════════════════════════════════════
+       CAPTION / SMALL TEXT
+    ══════════════════════════════════════ */
+    small, .stCaption, [data-testid="stCaptionContainer"] {
+        color: #6b7280 !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* ══════════════════════════════════════
+       SCROLLBAR
+    ══════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(250,204,21,0.25);
+        border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(250,204,21,0.45);
+    }
+
+    /* ══════════════════════════════════════
+       EXPANDER
+    ══════════════════════════════════════ */
+    [data-testid="stExpander"] {
+        background: rgba(255,255,255,0.025) !important;
+        border: 1px solid rgba(255,255,255,0.07) !important;
         border-radius: 12px !important;
+    }
+    [data-testid="stExpander"] summary {
+        color: #9ca3af !important;
+        font-size: 0.88rem !important;
     }
     </style>
     """,
