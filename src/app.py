@@ -166,11 +166,15 @@ st.markdown(
 # ---------------------------------------------------------------------------
 # Hero header
 # ---------------------------------------------------------------------------
-st.markdown('<div class="hero-title">☀️ Solar Advisor Bot</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="hero-caption">Real math, honest numbers. No hallucinated savings.</div>',
-    unsafe_allow_html=True,
-)
+_hero_col, _tag_col = st.columns([3, 1], gap="small")
+with _hero_col:
+    st.markdown('<div class="hero-title">☀️ Solar Advisor Bot</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="hero-caption">Real math, honest numbers. No hallucinated savings.</div>',
+        unsafe_allow_html=True,
+    )
+with _tag_col:
+    st.caption("Built for honest solar\ndecisions in Pakistan 🇵🇰")
 
 # ---------------------------------------------------------------------------
 # Session state init
@@ -310,12 +314,12 @@ with tab3:
 
                     btn_col1, btn_col2 = st.columns(2, gap="small")
                     with btn_col1:
-                        if st.button("\u2705 Use This Number", key="ocr_accept_btn"):
+                        if st.button("Use This Number", key="ocr_accept_btn"):
                             st.session_state["units_override"] = detected
                             st.success(f"Units updated to {detected:.0f}")
                     with btn_col2:
-                        if st.button("\u270f\ufe0f Enter Manually Instead", key="ocr_reject_btn"):
-                            st.info("No problem, type the correct units in the field above.")
+                        if st.button("Enter Manually Instead", key="ocr_reject_btn"):
+                            st.info("No problem, type the correct units in the first tab.")
                 else:
                     err = ocr_result.get("error", "")
                     raw = ocr_result.get("raw_text_seen", "")
@@ -360,10 +364,22 @@ with col_inv:
 
 st.markdown("</div>", unsafe_allow_html=True)
 
+st.divider()
+
 # ---------------------------------------------------------------------------
 # Estimate button
 # ---------------------------------------------------------------------------
 run_estimate = st.button("⚡ Get My Solar Estimate", key="run_btn")
+
+# ── Empty state shown before any estimate has been run ──
+if not run_estimate and not st.session_state.get("last_estimate"):
+    st.markdown(
+        "<div style='text-align:center;color:#6b7280;padding:2.5rem 0 1rem;font-size:1rem;'>"
+        "Fill in your details above and click "
+        "<strong style='color:#facc15;'>⚡ Get My Solar Estimate</strong> to see your results."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 # ---------------------------------------------------------------------------
 # Results
@@ -374,7 +390,7 @@ if run_estimate:
             estimate = get_full_estimate(monthly_units, city, is_tou)
         st.session_state["last_estimate"] = estimate
 
-        st.markdown("---")
+        st.divider()
         st.markdown('<div class="card"><div class="card-title">📊 Your Estimate</div>', unsafe_allow_html=True)
 
         c1, c2, c3 = st.columns(3)
@@ -400,8 +416,8 @@ if run_estimate:
         st.info(f"💡 {explanation}")
 
         # ── Mounting & protection recommendation ──
-        st.markdown("---")
-        st.subheader("🔩 Recommended mounting & protection")
+        st.divider()
+        st.subheader("🏠 Recommended Mounting & Protection")
         try:
             mount = get_mounting_recommendation(roof_type, inverter_location)
             st.session_state["last_mount"] = mount
@@ -415,6 +431,8 @@ if run_estimate:
         except Exception as mount_err:
             st.error(f"Could not load mounting recommendation: {mount_err}")
 
+        st.divider()
+
     except Exception as e:
         st.error(f"Something went wrong while calculating your estimate: {e}")
 
@@ -422,8 +440,8 @@ if run_estimate:
 # Vendor quote checker — only shown after an estimate exists
 # ---------------------------------------------------------------------------
 if st.session_state.get("last_estimate"):
-    st.markdown("---")
-    st.subheader("🔍 Got a quote from a vendor? Check if it's fair.")
+    st.divider()
+    st.subheader("🔍 Vendor Quote Checker")
 
     vendor_price = st.number_input(
         "Vendor's quoted price (PKR)",
@@ -512,7 +530,8 @@ if st.session_state.get("last_estimate"):
 # PDF Download — shown whenever an estimate exists in session_state
 # ---------------------------------------------------------------------------
 if st.session_state.get("last_estimate"):
-    st.markdown("---")
+    st.divider()
+    st.subheader("📥 Download Your Proposal")
     try:
         _est  = st.session_state["last_estimate"]
         _expl = st.session_state.get("last_explanation", "See the numbers above for your solar estimate.")
