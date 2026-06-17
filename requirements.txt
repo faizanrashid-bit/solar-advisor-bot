@@ -4,3 +4,4 @@ python-dotenv
 pillow
 requests
 beautifulsoup4
+reportlab
